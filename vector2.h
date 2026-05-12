@@ -1,6 +1,7 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 #include <poll.h>
+#pragma once
 
 struct fdinfo {
 	struct pollfd poll;
