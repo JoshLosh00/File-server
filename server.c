@@ -20,22 +20,6 @@
 
 int shutdown_fd[2];
 
-void freefdinfo(struct fdinfo *info){
-    close(info->poll.fd);
-    info->poll.fd = -1;
-    fclose(info->file);
-    free(info->inbuffer);
-    free(info->outbuffer);
-}
-
-void freefdinfo2(struct fdinfo *info){
-    close(info->poll.fd);
-    info->poll.fd = -1;
-    //fclose(info->file);
-    free(info->inbuffer);
-    free(info->outbuffer);
-}
-
 void senderror(int socket,const char *errormsg, const char *status){
     char header[256];
 
@@ -179,8 +163,6 @@ int main(){
         if(fds[0].revents & POLLIN){
             freeaddrinfo(servinfo);
             pvector_free(&v);
-            //vector_free_new(contents);
-            //free(contents);
             close(sfd);
             printf("Server shutdown.\n");
         return 0;
@@ -190,13 +172,12 @@ int main(){
             addr_size = sizeof(connection);
             newsfd= accept(sfd, (struct sockaddr *)&connection, &addr_size);
 
-            
-            fcntl(newsfd, F_SETFL, O_NONBLOCK);
-
             if (newsfd == -1){
                 perror("accept");
                 continue;
             }
+
+            fcntl(newsfd, F_SETFL, O_NONBLOCK);
 
             struct pollfd new_pollfd = {
                 newsfd,
@@ -310,9 +291,6 @@ int main(){
                     filename = slash ? slash + 1 : path; 
                 }
 
-                    //printf("%s\n", line);
-                    //printf("%s\n",method);
-                    //printf("%s\n", path);
                 printf("The file name is %s\n", filename);
 
                 if(strstr(path, "..")){//I can do better than that
@@ -330,7 +308,7 @@ int main(){
                     continue;
                 }
 
-                info->file = fopen(filename,"r");
+                info->file = fopen(filename,"rb");
 
                 if (info->file == NULL){
                     printf("404 sent.\n");
