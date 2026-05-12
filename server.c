@@ -10,7 +10,7 @@
 #include <poll.h> 
 #include <errno.h>
 #include <sys/wait.h>
-#include "vector2.h"
+#include "vector.h"
 #include <fcntl.h>
 
 #define PORT "8080"
@@ -69,45 +69,11 @@ int main(){
     char header_sent = 0;
     char header[256];
     char buf[1024];
-    char *msg = malloc(256); //No checks on these for now
-    char *filename = malloc(256);
-    //struct vector *msg = malloc(sizeof(struct vector));
-    //struct vector *contents = malloc(sizeof(struct vector));
+    char *msg;
+    char *filename;
     char buffer[BUFFER_SIZE];
-    //FILE *fp;
 
     pipe(shutdown_fd);
-
-    /*if(argc<2){
-        printf("Need filename.\n");
-        return 8;
-    }
-
-    fp = fopen(argv[1],"r");
-
-    if (fp == NULL){
-        printf("Invalid filename.\n");
-        return 9;
-    }
-
-    vector_init_new(msg,4);
-    vector_init_new(contents,4);
-    
-    while((t = fread(buf, 1, sizeof(buf), fp)) > 0){
-        vector_push_bytes(contents, buf, t);
-    }
-
-    //vector_string_termination(contents);
-
-    snprintf(header, sizeof(header),
-    "HTTP/1.1 200 OK\r\n"
-    "Content-Length: %zu\r\n"
-    "\r\n",
-    contents->size);
-
-    vector_push_bytes(msg,header,strlen(header));
-    vector_push_bytes(msg,contents->data,contents->size);
-    */   
 
     
     memset(&hints, 0, sizeof(hints));
@@ -129,9 +95,8 @@ int main(){
 
 
     int yes =1;
-    //char yes='1'; // Solaris people use this
 
-    // lose the pesky "Address already in use" error message
+    // lose the "Address already in use" error message
     setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
 
     if (bind(sfd,servinfo->ai_addr,servinfo->ai_addrlen) == -1){
@@ -185,7 +150,7 @@ int main(){
 
     while(1){
 
-        //Building the structure for poll. Can't see a way around building this, even if it is a copy of existing data.
+        //Building the structure for poll.
         if(nfds < v.size + 2){
             if(nfds_cap < v.capacity + 2){
                 nfds_cap  = v.capacity * 2;
@@ -235,7 +200,7 @@ int main(){
 
             struct pollfd new_pollfd = {
                 newsfd,
-                POLLIN,//Don't know exactly what to do with this yet.
+                POLLIN,
                 0
             };
 
@@ -267,17 +232,12 @@ int main(){
 
             int j = 1;
 
-            //For reusing dead connections. Might be too burdensome to do this every time
+            //For reusing dead connections.
             for(int i = 0; i < v.size; i++){
                 if(v.data[i].poll.fd == -1){
-                    /*free(v.data[i].inbuffer);
-                    if(v.data[i].file){
-                        fclose(v.data[i].file);
-                    }//I do need this in case I have to close the connection due to an error.*/
                     v.data[i] = new_poll;
                     j = 0;
                     fds[i+2]=v.data[i].poll;
-                    //printf("%d\n",v.data[i].poll.events & POLLIN);
                 }
             }
 
@@ -290,7 +250,6 @@ int main(){
         for(int i = 0; i < v.size; i++){
         
             struct fdinfo *info = &v.data[i];
-            //printf("%s\n%s\n",info->inbuffer,info->outbuffer);
 
             if(fds[i+2].revents & POLLIN){// == READABLE
                 int bytes = recv(info->poll.fd, buffer, BUFFER_SIZE -1, 0);
@@ -306,7 +265,7 @@ int main(){
                         freefdinfo(info);
                         continue;
                 } else{
-                    //Resizing inbuffer. Should have consistency in var names comprising multiple words
+                    //Resizing inbuffer.
                     if(info->in_cap < info->read + bytes){
                         while(info->in_cap < info->read + bytes + 1){
                             info->in_cap *= 2;
@@ -356,13 +315,6 @@ int main(){
                     //printf("%s\n", path);
                 printf("The file name is %s\n", filename);
 
-                    /*if(!strcmp(filename,"close")){
-                        printf("Sever closed");
-                        senderror(newsfd, "Server closed", "200 OK");
-                        close(newsfd);
-                        break;
-                    }*/
-
                 if(strstr(path, "..")){//I can do better than that
                     senderror(info->poll.fd,"403: forbidden.", "403 Forbidden");
                     freefdinfo2(info);
@@ -411,19 +363,6 @@ int main(){
 
             if(fds[i+2].revents & POLLOUT){
                 int r = info->out_length - info->sent;
-                /*if(info->header_sent == 0){
-                    int s = send(info->poll.fd, info->outbuffer + info->sent, info->out_length - info->sent, 0);
-                    if(s == -1){
-                        perror("send");
-                        continue;
-                    } else {
-                        info->sent += s;
-                    }
-                    if(info->out_length - info->sent == 0){
-                        info->sent = 0;
-                        info->header_sent = 1;
-                        info->out_length = 0;
-                    }*/
                 if(r == 0){
                     info->sent = 0;
                     info->out_length = 0;
@@ -440,8 +379,6 @@ int main(){
                     if(s == -1){
                         if(errno != EAGAIN && errno != EWOULDBLOCK){
                             perror("send");
-                            /*close(info->poll.fd);
-                            info->poll.fd = -1;//is closing the connection right here*/
                         }
                     } 
                     else{
