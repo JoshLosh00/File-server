@@ -33,13 +33,6 @@ void senderror(int socket,const char *errormsg, const char *status){
     send(socket, errormsg, strlen(errormsg), 0);
 }
 
-void handle_sigchld(int sig){
-    int status;
-    while ((waitpid(-1,&status,WNOHANG))>0){
-
-    }
-}
-
 void handle_sigint(int sig){
     char x = 1;
     write(shutdown_fd[1], &x, 1);
@@ -93,17 +86,11 @@ int main(){
         return 4;
     }
 
-    struct sigaction sa;
-    sa.sa_handler = handle_sigchld;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART;
-
     struct sigaction sa_shutdown;
     sa_shutdown.sa_handler = handle_sigint;
     sigemptyset(&sa_shutdown.sa_mask);
     sa_shutdown.sa_flags = 0;
 
-    sigaction(SIGCHLD, &sa, NULL);
     sigaction(SIGINT, &sa_shutdown, NULL);
 
 
